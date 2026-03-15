@@ -1,0 +1,27 @@
+#BlueJ class context
+comment0.target=Lid
+comment0.text=\r\n\ Write\ a\ description\ of\ class\ Lid\ here.\r\n\ \r\n\ @author\ (your\ name)\ \r\n\ @version\ (a\ version\ number\ or\ a\ date)\r\n
+comment1.params=lidNumber\ lidWidth
+comment1.target=Lid(int,\ int)
+comment1.text=\r\n\ Constructor\ for\ objects\ of\ class\ Lid\r\n
+comment10.params=cup
+comment10.target=void\ setCup(Cup)
+comment11.params=
+comment11.target=Cup\ getCup()
+comment2.params=number
+comment2.target=java.lang.String\ assignColor(int)
+comment3.params=x\ y
+comment3.target=void\ setPosition(int,\ int)
+comment4.params=
+comment4.target=int\ getLidHeight()
+comment5.params=
+comment5.target=int\ getLidNumber()
+comment6.params=
+comment6.target=java.lang.String\ getLidColor()
+comment7.params=color
+comment7.target=void\ setLidColor(java.lang.String)
+comment8.params=
+comment8.target=void\ makeVisible()
+comment9.params=
+comment9.target=void\ makeInvisible()
+numComments=12
