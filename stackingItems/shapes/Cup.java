@@ -24,7 +24,7 @@ public class Cup
     /**
      * Constructor for objects of class Cup
      */
-    public Cup(int cupNumber, int cupWidth, int scale)
+    public Cup(int cupNumber, int cupWidth)
     {
         this.cupNumber = cupNumber;
         this.cupHeight = 2 * cupNumber - 1;
@@ -32,18 +32,18 @@ public class Cup
         this.ofLid = null;
         this.colorCup = assignColor(cupNumber);
         this.xPositionCup = 0;
-        int alturaCalculada = (2 * cupNumber - 1) * scale;
-        int alturaAnterior = (2 * (cupNumber - 1) - 1) * scale;
-        int alturaMinima = alturaAnterior + scale * 2;
+        this.yPositionCup = 0;
+        this.cupRectangles = new Rectangle[3];
+        this.scale = 20;
+        this.grosor = scale;
+        int alturaBase = scale;
+        int alturaMinima = alturaBase + (cupNumber - 1)*scale;
+        int alturaCalculada = (2*cupNumber-1)*scale;
         if (alturaCalculada < alturaMinima){
             this.cupHeightPx = alturaMinima;
         } else {
             this.cupHeightPx = alturaCalculada;
         }
-        this.yPositionCup = 0;
-        this.cupRectangles = new Rectangle[3];
-        this.scale = scale;
-        this.grosor = scale;
         construirTaza();
     }
 

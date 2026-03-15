@@ -63,7 +63,7 @@ public class Tower
         boolean primeraCup = true;
         for (int i = numCups; i >= 1; i--){
             int anchoTaza = (2 * i - 1) * SCALE;
-            Cup cup = new Cup(i, anchoTaza, SCALE);
+            Cup cup = new Cup(i, anchoTaza);
             int xCentrada = centroTorre - (anchoTaza / 2);
             int yParedes = yFondoBase - cup.getCupHeightPx();
             cup.setPosition(xCentrada, yParedes);
@@ -80,7 +80,7 @@ public class Tower
     public void pushCup(int i)
     {
         if (!existeCup(i) && cabe(i)){
-            Cup cup = new Cup(i, widthTower, SCALE);
+            Cup cup = new Cup(i, widthTower);
             int yPixels = (heightTower - currentHeight - i)* SCALE;
             cup.setPosition(margen, yPixels);
             if(isVisible){
