@@ -82,36 +82,86 @@ public class Tower
         if (!existeCup(i) && cabe(i)){
             int anchoProporcional = (2 * i - 1) * SCALE;
             Cup cup = new Cup(i, anchoProporcional,  SCALE);
-            int yPixels = (heightTower - currentHeight - i)* SCALE;
-            cup.setPosition(margen, yPixels);
-            if(isVisible){
-                    cup.makeVisible();
+            int yPosition = calcYPosition(cup);
+            if(yPosition != -1){
+                int yCenter = margen + (widthTower/2);
+                int xCenter = yCenter - (cup.getCupWidth() / 2);
+                cup.setPosition(xCenter, yCenter);
+                cups.add(cup);
             }
-            cups.add(cup);
-            currentHeight += i;
-            int centroTorre = margen + (widthTower / 2);
-            int yFondoBase = heightTower * SCALE;
-            ArrayList<Cup> ordenadas = new ArrayList<Cup>(cups);
-            for (int a = 0; a < ordenadas.size() - 1; a++){
-                for (int b = a + 1; b < ordenadas.size(); b++){
-                    if (ordenadas.get(a).getCupNumber() < ordenadas.get(b).getCupNumber()){
-                        Cup temp = ordenadas.get(a);
-                        ordenadas.set(a, ordenadas.get(b));
-                        ordenadas.set(b, temp);
-                    }
+            if(isVisible){
+                cup.makeVisible();
+            }
+            currentHeight += cup.getCupHeight();
+            orderCupsPosition();
+        }
+    }
+    
+    /**
+     * Va a calcular la posición en la que debe quedar la copa i
+     */
+    public int calcYPosition(Cup cup){
+        if(cups.isEmpty() && lids.isEmpty()){
+            return heightTower * SCALE - cup.getCupHeightPx();
+        }
+        int newCupSize = cup.getCupNumber();
+        
+        for(int i = cups.size() - 1; i >= 0; i--){
+            Cup actualCup = cups.get(i);
+            int actualSize = actualCup.getCupNumber();
+            int yPositionNewCup = actualCup.getYPosition();
+            int xPositionNewCup = actualCup.getXPosition();
+            boolean hasLid = actualCup.hasLid();
+            if(hasLid){
+                return yPositionNewCup - cup.getCupHeightPx();
+            }else if(newCupSize < actualSize){
+                boolean isCupInside = isCupInside(cup);
+                if(!isCupInside){
+                    return yPositionNewCup + actualCup.getCupHeightPx() - cup.getCupHeightPx();
+                }
+            }else if(newCupSize > actualSize){
+              return yPositionNewCup - cup.getCupHeightPx();
+            }
+        }
+        
+        if(!cups.isEmpty()){
+            Cup upperCup = cups.get(cups.size()-1);
+            return upperCup.getYPosition() - cup.getCupHeightPx();
+        }
+        
+        return heightTower * SCALE - cup.getCupHeightPx();
+    }
+    
+    /**
+     * Ordena la torre de acuerdo a la información guardada
+     */
+    public void orderCupsPosition(){
+        for(int a = 0; a < cups.size() - 1; a++){
+            cups.get(a).makeInvisible();
+            for(int b = a + 1; b < cups.size(); b++){
+                if(cups.get(a).getYPosition() > cups.get(b).getYPosition()){
+                    Cup temp = cups.get(a);
+                    cups.set(a,cups.get(b));
+                    cups.set(b,temp);
                 }
             }
-            
-            int yFondo = yFondoBase;
-            for (Cup c : ordenadas){
-                int xCentrada = centroTorre - (c.getCupWidth() / 2);
-                int yParedes = yFondoBase - c.getCupHeightPx();
-                c.setPosition(xCentrada, yParedes);
-                yFondo = yParedes + SCALE;
-            }   
-        
-        }
+            cups.get(a).makeVisible();
+        } 
+    }
     
+    /**
+     * Mira si hay copas adentro de otra copa
+     */
+    private boolean isCupInside(Cup bigCup){
+        int yBigCup = bigCup.getYPosition();
+        int bottomBigCup = yBigCup + bigCup.getCupHeightPx();
+        for(Cup posibleLittleCup : cups){
+            int yLittleCup = posibleLittleCup.getYPosition();
+            if(yLittleCup < yBigCup && (yLittleCup + posibleLittleCup.getCupHeightPx()) >= bottomBigCup){
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
