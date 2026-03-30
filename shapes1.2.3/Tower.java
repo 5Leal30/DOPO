@@ -84,71 +84,179 @@ public class Tower
             Cup cup = new Cup(i, anchoProporcional, SCALE);
             int yPosition = calcYPosition(cup);
             if(yPosition != -1){
-                int centroTorre = margen + (widthTower / 2);
-                int xCentrada = centroTorre - (cup.getCupWidth() / 2);
+                int centerTower = margen + (widthTower / 2);
+                int xCentered = centerTower - (cup.getCupWidth() / 2);
             
                 if(!cups.isEmpty()){
-                    Cup topCup = cups.get(cups.size() - 1);
-                    if(cup.getCupNumber() > topCup.getCupNumber()){
-                        // Si la taza nueva es mas grande se pone arriba centrada
-                        cup.setPosition(xCentrada, yPosition);
+                    Cup cupToPlaceOn = findCupBelow(yPosition, cup);
+                
+                    if(cupToPlaceOn != null){
+                        int xInside = cupToPlaceOn.getXPosition() + (cupToPlaceOn.getCupWidth() - cup.getCupWidth()) / 2;
+                        cup.setPosition(xInside, yPosition);
                     } else {
-                        // Si la taza nueva es más pequeña va centrada dentro de la que ya
-                        // estaba en la torre
-                        int xDentro = topCup.getXPosition() + (topCup.getCupWidth() - cup.getCupWidth()) / 2;
-                        cup.setPosition(xDentro, yPosition);
+                        cup.setPosition(xCentered, yPosition);
                     }
                 } else {
-                    // Si no hay tazas se posiciona centrada
-                    cup.setPosition(xCentrada, yPosition);
+                    cup.setPosition(xCentered, yPosition);
                 }
                 cups.add(cup);
+            
+                if(isVisible){
+                    cup.makeVisible();
+                }
+                currentHeight += cup.getCupHeight();
+                orderCupsPosition();
+                lastOperationOk = true;
+            } else {
+                lastOperationOk = false;
             }
-            if(isVisible){
-                cup.makeVisible();
-            }
-            currentHeight += cup.getCupHeight();
-            orderCupsPosition();
-            lastOperationOk = true;
         } else {
             lastOperationOk = false;
         }
     }
     
     /**
-     * Va a calcular la posición en la que debe quedar la copa i
-     */
+    * Va a calcular la posición en la que debe quedar la copa i
+    */
     public int calcYPosition(Cup cup){
         if(cups.isEmpty() && lids.isEmpty()){
             return heightTower * SCALE - cup.getCupHeightPx();
         }
+    
         int newCupSize = cup.getCupNumber();
-        
-        //Mejor taza donde meter la taza actual
-        Cup bestCup = null;
+        Cup bestContainer = null;
+        Cup cupBelow = null;
 
-        for(Cup actualCup : cups){
-             // Si cabe dentro de una taza, se queda con la taza mas pequeña
-             // pero que siga siendo mas pequeña que la nueva taza
-             if(cup.getCupNumber() < actualCup.getCupNumber()){
-                 if(bestCup == null || actualCup.getCupNumber() < bestCup.getCupNumber()){
-                     bestCup = actualCup;
-                 }
-             }
+        for(Cup currentCup : cups){
+            if(isCupAccessible(currentCup)){
+                if(cup.getCupNumber() < currentCup.getCupNumber()){
+                    Cup innerCup = getCupDirectlyBelow(currentCup);
+            
+                    if(innerCup == null){
+                        if(bestContainer == null || currentCup.getCupNumber() < bestContainer.getCupNumber()){
+                            bestContainer = currentCup;
+                            cupBelow = null;
+                        }
+                    } else {
+                        if(cup.getCupNumber() < innerCup.getCupNumber()){
+                            Cup deepestContainer = findProperContainer(innerCup, cup);
+                            if(deepestContainer != null && isCupAccessible(deepestContainer)){
+                                bestContainer = deepestContainer;
+                                cupBelow = getCupDirectlyBelow(deepestContainer);
+                            }
+                        } else {
+                            bestContainer = currentCup;
+                            cupBelow = innerCup;
+                        }
+                    }
+                }
+            }
         }
-        
-        //Si encuentra una taza la coloca dentro de esa taza centrada
-        if(bestCup != null){
-             return bestCup.getYPosition() + (bestCup.getCupHeightPx() - cup.getCupHeightPx()) / 2;
+    
+        if(bestContainer != null){
+            if(cupBelow != null){
+                return cupBelow.getYPosition() - cup.getCupHeightPx();
+            } else {
+                return bestContainer.getYPosition() + bestContainer.getCupHeightPx() - (cup.getCupHeightPx() + 20);
+            }
         }
-        
-        // Si no encuentra una taza, la oloca encima de la ultima que haya
+    
         if(!cups.isEmpty()){
-            Cup upperCup = cups.get(cups.size()-1);
-            return upperCup.getYPosition() - cup.getCupHeightPx();
+            Cup topCup = getTopCup();
+            return topCup.getYPosition() - cup.getCupHeightPx();
         }
-        
+    
         return heightTower * SCALE - cup.getCupHeightPx();
+    }
+    
+    /**
+    * Revisa si se puede entrar a la Copa
+    */
+    private boolean isCupAccessible(Cup targetCup){
+        int yTarget = targetCup.getYPosition();
+        int topTarget = yTarget;
+        int bottomTarget = yTarget + targetCup.getCupHeightPx();
+    
+        for(Cup otherCup : cups){
+            if(otherCup == targetCup) continue;
+        
+            int yOther = otherCup.getYPosition();
+            int bottomOther = yOther + otherCup.getCupHeightPx();
+        
+            if(bottomOther == topTarget){
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Obtiene la copa de mas arriba de la torre
+     */
+        private Cup getTopCup(){
+        if(cups.isEmpty()){
+            return null;
+        }
+        Cup topCup = cups.get(0);
+        for(Cup cup : cups){
+            if(cup.getYPosition() < topCup.getYPosition()){
+                topCup = cup;
+            }
+        }
+        return topCup;
+    } 
+    
+    /**
+     * Obtiene la copa mas alta dentro de la copa i
+     */
+    private Cup getCupDirectlyBelow(Cup parentCup){
+        int yParent = parentCup.getYPosition();
+        int bottomParent = yParent + parentCup.getCupHeightPx();
+        Cup highestInner = null;
+        int highestY = -1;
+    
+        for(Cup possibleInner : cups){
+            if(possibleInner == parentCup) continue;
+        
+            int yInner = possibleInner.getYPosition();
+            int bottomInner = yInner + possibleInner.getCupHeightPx();
+        
+            if(yInner >= yParent && bottomInner <= bottomParent){
+                if(yInner > highestY){
+                    highestY = yInner;
+                    highestInner = possibleInner;
+                }
+            }
+        }
+        return highestInner;
+    }
+    
+    /** 
+     * Encuentra la copa apropiado para la copa
+     */
+        private Cup findProperContainer(Cup currentContainer, Cup newCup){
+        Cup innerCup = getCupDirectlyBelow(currentContainer);
+    
+        if(innerCup == null){
+            return currentContainer;
+        } else if(newCup.getCupNumber() < innerCup.getCupNumber()){
+            return findProperContainer(innerCup, newCup);
+        } else {
+            return currentContainer;
+        }
+    }
+
+    /**
+     * Finds the cup on which the new cup will be placed
+     */
+    private Cup findCupBelow(int yPosition, Cup newCup){
+        for(Cup existingCup : cups){
+            int bottomOfExisting = existingCup.getYPosition() + existingCup.getCupHeightPx();
+            if(yPosition + newCup.getCupHeightPx() == bottomOfExisting){
+                return existingCup;
+            }
+        }   
+        return null;
     }
     
     /**
@@ -234,7 +342,13 @@ public class Tower
             int anchoTapa = (2 * i - 1) * SCALE;
             int centroTorre = margen + (widthTower / 2);
             int xCentrada = centroTorre - (anchoTapa / 2);
-            int yPixels = (heightTower - currentHeight - 1)* SCALE;
+            int yPixels;
+            if (!cups.isEmpty()) {
+                Cup topCup = cups.get(cups.size() - 1);
+                yPixels = topCup.getYPosition() - 2 * SCALE;
+            } else {
+            yPixels = (heightTower - currentHeight - 1) * SCALE;
+            }
             if (existeCup(i)){
                 anchoTapa = buscarCup(i).getCupWidth();
             }else{
@@ -595,10 +709,15 @@ public class Tower
 
             if (cup.hasLid()){
                 int xTapa = cup.getXPosition();
-                int yTapa = cup.getYPosition();
+                int yTapa = cup.getYPosition() - SCALE; //Cambio: Ahora se le resta SCALE para que quede bien ubicada la tapa
                 cup.getLid().setPosition(xTapa, yTapa);
                 if (isVisible){
                     cup.getLid().makeVisible();
+                }
+            }
+            for(Cup c: cups){ //
+                if(c.getYPosition() < cup.getYPosition()){
+                    c.setPosition(c.getXPosition(), c.getYPosition() - SCALE);
                 }
             }
         }

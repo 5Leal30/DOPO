@@ -23,7 +23,7 @@ public class Lid
     {
         this.lidNumber = lidNumber;
         int scale = 20;
-        this.lidHeight = scale*2;
+        this.lidHeight = 20;
         this.lidWidth = lidWidth;
         this.ofCup = null;
         this.lidColor = assignColor(lidNumber);
