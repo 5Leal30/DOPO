@@ -117,16 +117,15 @@ public class Tower
     
     /**
     * Va a calcular la posición en la que debe quedar la copa i
+    * viendo si ademas de tazas, tambien hay tapas
     */
     public int calcYPosition(Cup cup){
         if(cups.isEmpty() && lids.isEmpty()){
             return heightTower * SCALE - cup.getCupHeightPx();
         }
-    
         int newCupSize = cup.getCupNumber();
         Cup bestContainer = null;
         Cup cupBelow = null;
-
         for(Cup currentCup : cups){
             if(isCupAccessible(currentCup)){
                 if(cup.getCupNumber() < currentCup.getCupNumber()){
@@ -152,20 +151,33 @@ public class Tower
                 }
             }
         }
-    
         if(bestContainer != null){
+            int nivelSuelo;
             if(cupBelow != null){
-                return cupBelow.getYPosition() - cup.getCupHeightPx();
+                nivelSuelo = cupBelow.getYPosition();
             } else {
-                return bestContainer.getYPosition() + bestContainer.getCupHeightPx() - (cup.getCupHeightPx() + 20);
+                nivelSuelo = bestContainer.getYPosition() + bestContainer.getCupHeightPx() - 20; // 20 es tu SCALE de la base
             }
+            // Laz tazas tambien detectan si hay tapas
+            int cimaActual = nivelSuelo;
+            for (Lid l : lids) {
+                if (l.getYPosition() >= bestContainer.getYPosition() && 
+                    l.getYPosition() <= bestContainer.getYPosition() + bestContainer.getCupHeightPx()) {
+                    
+                    if (l.getYPosition() < cimaActual) {
+                        cimaActual = l.getYPosition();
+                    }
+                }
+            }
+            return cimaActual - cup.getCupHeightPx();
         }
-    
-        if(!cups.isEmpty()){
-            Cup topCup = getTopCup();
-            return topCup.getYPosition() - cup.getCupHeightPx();
+        if(!cups.isEmpty() || !lids.isEmpty()){
+            int minY = heightTower * SCALE;
+            for (Cup c : cups) if (c.getYPosition() < minY) minY = c.getYPosition();
+            for (Lid l : lids) if (l.getYPosition() < minY) minY = l.getYPosition();
+            
+            return minY - cup.getCupHeightPx();
         }
-    
         return heightTower * SCALE - cup.getCupHeightPx();
     }
     
@@ -338,38 +350,87 @@ public class Tower
      * se asocia y no se agrega si ya existe o no cabe
      */
     public void pushLid(int i){
-        if (!existeLid(i) && currentHeight + 1 <= heightTower){
+        if (!existeLid(i) && (currentHeight + 1 <= heightTower)){
             int anchoTapa = (2 * i - 1) * SCALE;
             int centroTorre = margen + (widthTower / 2);
             int xCentrada = centroTorre - (anchoTapa / 2);
-            int yPixels;
-            if (!cups.isEmpty()) {
-                Cup topCup = cups.get(cups.size() - 1);
-                yPixels = topCup.getYPosition() - 2 * SCALE;
-            } else {
-            yPixels = (heightTower - currentHeight - 1) * SCALE;
-            }
-            if (existeCup(i)){
-                anchoTapa = buscarCup(i).getCupWidth();
-            }else{
-                anchoTapa = widthTower;
-            }
+            // Se usa el nuevo metodo (parecido al de cup) para que queden bien
+            //posicionadas las tapas guiandose por lo que hay en la cima de la torre
+            int yPixels = calcYPositionLid(i);
             Lid lid = new Lid(i, anchoTapa);
             lid.setPosition(xCentrada, yPixels);
-            if (isVisible){
-                lid.makeVisible();
-            }
+            if (isVisible) lid.makeVisible();
             lids.add(lid);
-            if (existeCup(i)){
-                Cup cup =buscarCup(i);
-                cup.setLid(lid);
-                lid.setCup(cup);
-            }
             currentHeight += 1;
             lastOperationOk = true;
-        }else{
+        } else {
             lastOperationOk = false;
         }
+    }
+    
+    /**
+     * Simula la caída de una tapa siguiendo las mismas reglas lógicas 
+     * que calcYPosition usa para cup
+     */
+    private int calcYPositionLid(int lidNumber) {
+        if(cups.isEmpty() && lids.isEmpty()){
+            return heightTower * SCALE - SCALE; // La altura de una tapa es SCALE
+        }
+        Cup bestContainer = null;
+        Cup cupBelow = null;
+        // Creamos una taza temporal solo para reutilizar tus métodos de búsqueda
+        Cup dummyCup = new Cup(lidNumber, (2 * lidNumber - 1) * SCALE, SCALE);
+        for(Cup currentCup : cups){
+            if(isCupAccessible(currentCup)){
+                if(lidNumber < currentCup.getCupNumber()){
+                    Cup innerCup = getCupDirectlyBelow(currentCup);
+                    if(innerCup == null){
+                        if(bestContainer == null || currentCup.getCupNumber() < bestContainer.getCupNumber()){
+                            bestContainer = currentCup;
+                            cupBelow = null;
+                        }
+                    } else {
+                        if(lidNumber < innerCup.getCupNumber()){
+                            Cup deepestContainer = findProperContainer(innerCup, dummyCup);
+                            if(deepestContainer != null && isCupAccessible(deepestContainer)){
+                                bestContainer = deepestContainer;
+                                cupBelow = getCupDirectlyBelow(deepestContainer);
+                            }
+                        } else {
+                            bestContainer = currentCup;
+                            cupBelow = innerCup;
+                        }
+                    }
+                }
+            }
+        }
+        if(bestContainer != null){
+            int nivelSuelo;
+            if(cupBelow != null){
+                nivelSuelo = cupBelow.getYPosition();
+            } else {
+                nivelSuelo = bestContainer.getYPosition() + bestContainer.getCupHeightPx() - 20; 
+            }
+            // Se revisa si hay tapas
+            int cimaActual = nivelSuelo;
+            for (Lid l : lids) {
+                if (l.getYPosition() >= bestContainer.getYPosition() && 
+                    l.getYPosition() <= bestContainer.getYPosition() + bestContainer.getCupHeightPx()){
+                    if (l.getYPosition() < cimaActual) {
+                        cimaActual = l.getYPosition();
+                    }
+                }
+            }
+            return cimaActual - SCALE;
+        }
+        // Si no cupo en ninguna taza cae en lo que haya en la cima de la torre
+        if(!cups.isEmpty() || !lids.isEmpty()){
+            int minY = heightTower * SCALE;
+            for (Cup c : cups) if (c.getYPosition() < minY) minY = c.getYPosition();
+            for (Lid l : lids) if (l.getYPosition() < minY) minY = l.getYPosition();
+            return minY - SCALE;
+        }
+        return heightTower * SCALE - SCALE;
     }
     
     /**
@@ -456,18 +517,39 @@ public class Tower
     }
     
     /**
-     * Tapa todas las tazas que tienen tapa pero que aún no estan
-     * asociadas y luego reorganiza.
+     * Tapa todas las tazas que tienen tapa y luego
+     * reorganiza para dejar la torre con las fisicas correctas
      */
     public void cover(){
+        boolean huboCambios = false;
         for (Cup cup : cups){
             if (!cup.hasLid() && existeLid(cup.getCupNumber())){
                 Lid lid = buscarLid(cup.getCupNumber());
+                // Se asocian tapa-taza
                 cup.setLid(lid);
                 lid.setCup(cup);
+                huboCambios = true;
+                // Se lleva la tapa directo a su taza correspondiente
+                int xTapa = cup.getXPosition();
+                int yTapa = cup.getYPosition() - SCALE;
+                lid.setPosition(xTapa, yTapa);
+                // Si hay algo por encima de la taza a la que se le va a poner la tapa,
+                // sube
+                for (Cup c : cups) {
+                    if (c != cup && c.getYPosition() <= cup.getYPosition()) {
+                        c.setPosition(c.getXPosition(), c.getYPosition() - SCALE);
+                    }
+                }
+                for (Lid l : lids) {
+                    if (l != lid && l.getYPosition() <= cup.getYPosition()) {
+                        l.setPosition(l.getXPosition(), l.getYPosition() - SCALE);
+                    }
+                }
             }
         }
-        redibujarElementos();
+        if (huboCambios && isVisible) {
+            makeVisible();
+        }
         lastOperationOk = true;
     }
     
@@ -693,35 +775,24 @@ public class Tower
      * correctas
      */
     private void redibujarElementos(){
-        for (Cup cup : cups){
-            cup.makeInvisible();
-        }
-    
-        for (Lid lid : lids){
-            lid.makeInvisible();
-        }
-    
+        for (Cup cup : cups) cup.makeInvisible();
+        for (Lid lid : lids) lid.makeInvisible();
+
         for (Cup cup: cups){
-            if (isVisible){
+            if (isVisible) {
                 cup.makeVisible();
             }
-        
-
             if (cup.hasLid()){
-                int xTapa = cup.getXPosition();
-                int yTapa = cup.getYPosition() - SCALE; //Cambio: Ahora se le resta SCALE para que quede bien ubicada la tapa
-                cup.getLid().setPosition(xTapa, yTapa);
+                Lid lid = cup.getLid();
+                int centroTorre = margen + (widthTower / 2);
+                int xCentrada = centroTorre - (lid.getLidWidth() / 2);
+                int yTapa = cup.getYPosition() - SCALE; 
+                lid.setPosition(xCentrada, yTapa);
                 if (isVisible){
-                    cup.getLid().makeVisible();
-                }
-            }
-            for(Cup c: cups){ //
-                if(c.getYPosition() < cup.getYPosition()){
-                    c.setPosition(c.getXPosition(), c.getYPosition() - SCALE);
+                    lid.makeVisible();
                 }
             }
         }
-    
         for (Lid lid: lids){
             if (lid.getCup() == null){
                 if (isVisible){

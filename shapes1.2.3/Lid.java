@@ -39,10 +39,24 @@ public class Lid
         return colors[(number - 1)%colors.length];
     }
     
+    //CAMBIO
     public void setPosition(int x, int y){
+        int dx = x - this.xPositionLid;
+        int dy = y - this.yPositionLid;
         this.xPositionLid = x;
         this.yPositionLid = y;
-        lidRectangle.setPosition(x,y);
+        lidRectangle.moveHorizontal(dx);
+        lidRectangle.moveVertical(dy);
+    }
+    
+    //CAMBIO
+    public int getYPosition(){
+        return yPositionLid;
+    }
+    
+    //CAMBIO
+    public int getXPosition(){
+        return xPositionLid;
     }
     
     public int getLidWidth(){ //Agregado
