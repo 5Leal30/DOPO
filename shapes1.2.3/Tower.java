@@ -334,27 +334,86 @@ public class Tower
                 cup.getLid().setCup(null);
                 cup.setLid(null);
             }
-            ArrayList<Cup> cups2 = new ArrayList<>();
-            for(Cup c : cups){
-                cups2.add(c);
-            }
             currentHeight -= cup.getCupHeight();
             cup.makeInvisible();
             cups.remove(cup);
-            cups2.remove(cup);
-            for (Cup c : cups){
-                c.makeInvisible();
-            }
-            for (int c = 0; c < cups2.size()-1; c++){
-                pushCup(c);
-                makeVisible();
-            }
-            for(Cup c : cups){
-                cups.add(c);
-            }
+            fallObjects();
             lastOperationOk = true;
         }else{
             lastOperationOk = false;
+        }
+    }
+    
+    /**
+     * Metodo auxiliar encargado de hacer que las tazas y tapas
+     * caigan al piso si es que lo que hay debajo de ellas desaparecio
+     */
+    public void fallObjects(){
+        ArrayList<Object> objetos = objectsDownToUp();
+        for(Object o: objetos){
+            if(o instanceof Cup){
+                fallCup((Cup) o);
+            }
+            else if (o instanceof Lid){
+                fallLid((Lid) o);
+            }
+        }
+    }
+    
+    /**
+     * Este metodo nos permite obtener todos los elementos de la torre
+     * de abajo hacia arriba
+     */
+    private ArrayList<Object> objectsDownToUp(){
+        ArrayList<Object> objetos = new ArrayList<>();
+        objetos.addAll(lids);
+        objetos.addAll(cups);
+        
+        for(int i = 0; i < objetos.size() - 1; i++){
+            for (int j = i + 1; j < objetos.size(); j++){
+                int y1 = objetos.get(i) instanceof Cup ? ((Cup)objetos.get(i)).getYPosition() : ((Lid)objetos.get(i)).getYPosition();
+                int y2 = objetos.get(j) instanceof Cup ? ((Cup)objetos.get(j)).getYPosition() : ((Lid)objetos.get(j)).getYPosition();
+                
+                if(y1 < y2){
+                    Object temp = objetos.get(i);
+                    objetos.set(i, objetos.get(j));
+                    objetos.set(j, temp);
+                }
+                
+            }
+        }
+        return objetos;
+    }
+    
+    /**
+     * Deja en su sitio correcto a las tazas 
+     * recalculando su altura con ayuda de calcYPosition
+     */
+    private void fallCup(Cup cup){
+        cups.remove(cup);
+        Lid suTapa = cup.hasLid() ? cup.getLid() : null;
+        if (suTapa != null) lids.remove(suTapa);
+        int nuevoY = calcYPosition(cup);
+        cups.add(cup);
+        if (suTapa != null) lids.add(suTapa); 
+        if(nuevoY > cup.getYPosition()){
+            cup.setPosition(cup.getXPosition(), nuevoY);
+        }
+    }
+    
+    /**
+     * Deja en su sitio correcto a las tapas 
+     * recalculando su altura con ayuda de calcYPosition
+     */
+    private void fallLid(Lid lid){
+        if (lid.getCup() == null) {
+            lids.remove(lid);
+            int nuevoY = calcYPositionLid(lid.getLidNumber());
+            lids.add(lid);
+            
+            if(nuevoY > lid.getYPosition()){
+                lid.setPosition(lid.getXPosition(), nuevoY);
+            }
         }
     }
     
@@ -469,22 +528,21 @@ public class Tower
      * Elimina la tapa i de cualquier posición, si tiene una taza
      * asociada, se elimina la asociación, no la taza.
      */
-    public void removeLid(int i)
-    {
-     if (existeLid(i)){
-         Lid lid = buscarLid(i);
-         if (lid.getCup() != null){
-             lid.getCup().setLid(null);
-             lid.setCup(null);
-         }
-         currentHeight -= 1;
-         lid.makeInvisible();
-         lids.remove(lid);
-         redibujarElementos();
-         lastOperationOk = true;
-     }else{
-         lastOperationOk = false;
-     }
+    public void removeLid(int i){
+        if (existeLid(i)){
+            Lid lid = buscarLid(i);
+            if (lid.getCup() != null){
+                lid.getCup().setLid(null);
+                lid.setCup(null);
+            }
+            currentHeight -= 1;
+            lid.makeInvisible();
+            lids.remove(lid);
+            fallObjects();
+            lastOperationOk = true;
+        }else{
+            lastOperationOk = false;
+        }
         
     }
     
@@ -713,10 +771,35 @@ public class Tower
                 }
             }
         }
-        if (huboCambios && isVisible) {
-            makeVisible();
+        if (huboCambios) {
+            fallObjects();
+            if(isVisible){
+                redibujarElementos();
+            }
         }
         lastOperationOk = true;
+    }
+    
+    /**
+     * Retorna una lista con todas las tazas y tapas que están
+     * físicamente dentro de los límites de la taza
+     */
+    private ArrayList<Object> obtenerContenidoDentroTaza(Cup cup) {
+        ArrayList<Object> contenido = new ArrayList<>();
+        int top = cup.getYPosition();
+        int bottom = cup.getYPosition() + cup.getCupHeightPx();
+
+        for (Cup c : cups) {
+            if (c != cup && c.getYPosition() >= top && (c.getYPosition() + c.getCupHeightPx()) <= bottom) {
+                contenido.add(c);
+            }
+        }
+        for (Lid l : lids) {
+            if (l.getYPosition() >= top && l.getYPosition() <= bottom) {
+                contenido.add(l);
+            }
+        }
+        return contenido;
     }
     
     /**
