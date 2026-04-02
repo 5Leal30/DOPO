@@ -39,7 +39,7 @@ public class Lid
         return colors[(number - 1)%colors.length];
     }
     
-    //CAMBIO
+ 
     public void setPosition(int x, int y){
         int dx = x - this.xPositionLid;
         int dy = y - this.yPositionLid;
@@ -59,18 +59,22 @@ public class Lid
         return xPositionLid;
     }
     
-    public int getLidWidth(){ //Agregado
-        return lidWidth;
+    public void setLidNumber(int number){
+        this.lidNumber = number;
     }
+
+    public int getLidNumber(){
+        return this.lidNumber;
+    }
+
+    public int getLidWidth(){
+        return this.lidWidth;
+    }
+    
     
     public int getLidHeight()
     {
         return lidHeight;
-    }
-    
-    public int getLidNumber()
-    {
-        return lidNumber;
     }
     
     public String getLidColor()

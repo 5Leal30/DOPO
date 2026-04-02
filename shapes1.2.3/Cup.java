@@ -90,10 +90,18 @@ public class Cup
         return yPositionCup;
     }
     
+    public void setCupNumber(int number){
+       this.cupNumber = number;
+        }
+
+    public void setCupWidth(int width){
+        this.cupWidth = width;
+        }
+
     public int getCupWidth(){
-        return cupWidth;
+        return this.cupWidth;
     }
-    
+        
     public int getCupHeight()
     {
         return cupHeight;

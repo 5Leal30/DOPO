@@ -581,7 +581,7 @@ public class Tower
     public void swap(String[] o1, String[] o2){
         if (!existeObjeto(o1) || !existeObjeto(o2)){
             lastOperationOk = false;
-            return;
+        return;
         }
     
         Object obj1 = getObject(o1);
@@ -590,82 +590,195 @@ public class Tower
         if (obj1 == null || obj2 == null){
             lastOperationOk = false;
             return;
-        }   
+        }
     
-        ArrayList<Object[]> allElements = new ArrayList<>();
+        if (obj1 instanceof Cup && obj2 instanceof Cup){
+            Cup cup1 = (Cup) obj1;
+            Cup cup2 = (Cup) obj2;
+        
+            int tempNumber = cup1.getCupNumber();
+            cup1.setCupNumber(cup2.getCupNumber());
+            cup2.setCupNumber(tempNumber);
+        
+        } else if (obj1 instanceof Lid && obj2 instanceof Lid){
+            Lid lid1 = (Lid) obj1;
+            Lid lid2 = (Lid) obj2;
+        
+            int tempNumber = lid1.getLidNumber();
+            lid1.setLidNumber(lid2.getLidNumber());
+            lid2.setLidNumber(tempNumber);
+        
+        } else if (obj1 instanceof Cup && obj2 instanceof Lid){
+            Cup cup = (Cup) obj1;
+            Lid lid = (Lid) obj2;
+        
+            int tempNumber = cup.getCupNumber();
+            cup.setCupNumber(lid.getLidNumber());
+            lid.setLidNumber(tempNumber);
+        
+        } else if (obj1 instanceof Lid && obj2 instanceof Cup){
+            Lid lid = (Lid) obj1;
+            Cup cup = (Cup) obj2;
+        
+            int tempNumber = lid.getLidNumber();
+            lid.setLidNumber(cup.getCupNumber());
+            cup.setCupNumber(tempNumber);
+        }
     
-
+        rebuildTowerFromObjects();
+    
+        lastOperationOk = true;
+        }
+    /**
+     * Reconstruye la torre usando los numeros de copas y tapas
+     */
+    private void rebuildTowerFromObjects(){
+        ArrayList<Integer> cupNumbers = new ArrayList<>();
         for (Cup cup : cups){
-            addCupWithThings(allElements, cup);
+            cupNumbers.add(cup.getCupNumber());
         }
     
+        ArrayList<Integer> lidNumbers = new ArrayList<>();
         for (Lid lid : lids){
-            allElements.add(new Object[]{null, lid});
+            lidNumbers.add(lid.getLidNumber());
         }
     
-        int index1 = -1;
-        int index2 = -1;
-    
-        for (int i = 0; i < allElements.size(); i++){
-            Object[] unit = allElements.get(i);
-        
-            if (unit[0] != null && unit[0] == obj1){
-                index1 = i;
-            }
-            if (unit[1] != null && unit[1] == obj1){
-                index1 = i;
-            }
-            if (unit[0] != null && unit[0] == obj2){
-                index2 = i;
-            }
-            if (unit[1] != null && unit[1] == obj2){
-                index2 = i;
-            }
+        for (Cup cup : cups){
+            cup.makeInvisible();
+        }
+        for (Lid lid : lids){
+            lid.makeInvisible();
         }
     
-        if (index1 >= 0 && index2 >= 0){
-            Object[] temp = allElements.get(index1);
-            allElements.set(index1, allElements.get(index2));
-            allElements.set(index2, temp);
-        
-            rebuildTowerFromList(allElements);
-            lastOperationOk = true;
-        } else {
-            lastOperationOk = false;
-        }
-    }
+        cups.clear();
+        lids.clear();
+        currentHeight = 0;
     
-    private void addCupWithThings(ArrayList<Object[]> list, Cup cup){
-        list.add(new Object[]{cup, null});
-        int yParent = cup.getYPosition();
-        int bottomParent = yParent + cup.getCupHeightPx();
-    
-        for (Cup other : cups){
-            if (other != cup){
-                int yOther = other.getYPosition();
-                int bottomOther = yOther + other.getCupHeightPx();
-                if (yOther >= yParent && bottomOther <= bottomParent){
-                    boolean isDirect = true;
-                    for (Cup between : cups){
-                        if (between != cup && between != other){
-                            int yBetween = between.getYPosition();
-                            int bottomBetween = yBetween + between.getCupHeightPx();
-                            if (yBetween >= yParent && bottomBetween <= bottomParent){
-                                if (yBetween > yOther && bottomBetween < bottomParent){
-                                    isDirect = false;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if (isDirect){
-                        addCupWithThings(list, other);
-                    }
+        for (int a = 0; a < cupNumbers.size() - 1; a++){
+            for (int b = a + 1; b < cupNumbers.size(); b++){
+                if (cupNumbers.get(a) < cupNumbers.get(b)){
+                    int temp = cupNumbers.get(a);
+                    cupNumbers.set(a, cupNumbers.get(b));
+                    cupNumbers.set(b, temp);
                 }
             }
         }
+    
+        for (int number : cupNumbers){
+            pushCup(number);
+        }
+    
+        for (int number : lidNumbers){
+            pushLid(number);
+        }
+    }
+
+    private void rebuildFullTower(){
+        ArrayList<Cup> allCups = new ArrayList<>(cups);
+        ArrayList<Lid> allLids = new ArrayList<>(lids);
+    
+        for (Cup cup : cups){
+            cup.makeInvisible();
+        }
+        for (Lid lid : lids){
+            lid.makeInvisible();
+        }
+    
+        cups.clear();
+        lids.clear();
+        currentHeight = 0;
+    
+        int centerTower = margen + (widthTower / 2);
+        int yBottom = heightTower * SCALE;
+    
+        for (int a = 0; a < allCups.size() - 1; a++){
+            for (int b = a + 1; b < allCups.size(); b++){
+                if (allCups.get(a).getCupNumber() < allCups.get(b).getCupNumber()){
+                    Cup temp = allCups.get(a);
+                    allCups.set(a, allCups.get(b));
+                    allCups.set(b, temp);
+                }
+            }
+        }
+    
+        for (Cup cup : allCups){
+            boolean placed = false;
+        
+            for (int i = cups.size() - 1; i >= 0; i--){
+                Cup existing = cups.get(i);
+            
+                if (cup.getCupNumber() < existing.getCupNumber()){
+                    boolean hasSmallerInside = false;
+                    for (Cup inner : cups){
+                        if (inner.getYPosition() > existing.getYPosition() && 
+                            inner.getYPosition() + inner.getCupHeightPx() < existing.getYPosition() + existing.getCupHeightPx()){
+                            if (inner.getCupNumber() < cup.getCupNumber()){
+                                hasSmallerInside = true;
+                                break;
+                            }
+                        }
+                    }
+                
+                    if (!hasSmallerInside){
+                        int xInside = existing.getXPosition() + (existing.getCupWidth() - cup.getCupWidth()) / 2;
+                        int yInside = existing.getYPosition() + existing.getCupHeightPx() - cup.getCupHeightPx();
+                        cup.setPosition(xInside, yInside);
+                        cups.add(cup);
+                        placed = true;
+                        break;
+                    }
+                }
+            }
+        
+            if (!placed){
+                int xCentered = centerTower - (cup.getCupWidth() / 2);
+                int yPosition = yBottom - cup.getCupHeightPx();
+                cup.setPosition(xCentered, yPosition);
+                cups.add(cup);
+                yBottom = yPosition;
+            }
+        
+            currentHeight += cup.getCupHeight();
+        
+            if (isVisible){
+                cup.makeVisible();
+            }
+        }
+    
+        for (Lid lid : allLids){
+            boolean placed = false;
+            for (Cup cup : cups){
+                if (cup.getCupNumber() == lid.getLidNumber()){
+                    int xCentered = cup.getXPosition() + (cup.getCupWidth() - lid.getLidWidth()) / 2;
+                    lid.setPosition(xCentered, cup.getYPosition() - lid.getLidHeight());
+                    lids.add(lid);
+                    placed = true;
+                    break;
+                }
+            }
+        
+            if (!placed && !cups.isEmpty()){
+                Cup topCup = cups.get(cups.size() - 1);
+                int xCentered = centerTower - (lid.getLidWidth() / 2);
+                lid.setPosition(xCentered, topCup.getYPosition() - lid.getLidHeight());
+                lids.add(lid);
+                currentHeight += 1;
+            } else if (placed){
+                currentHeight += 1;
+            }
+        
+            if (isVisible){
+                lid.makeVisible();
+            }
+        }
+    
+        orderCupsPosition();
     }
     
+    
+    /**
+     * Obtiene el objeto (Cup o Lid) del array así: ["cup","5"] , ["lid","3"]
+     */
     private Object getObject(String[] o){
         int num = Integer.parseInt(o[1]);
     
@@ -686,63 +799,6 @@ public class Tower
         return null;
     }
     
-    private void rebuildTowerFromList(ArrayList<Object[]> units){
-        for (Cup cup : cups){
-            cup.makeInvisible();
-        }
-        for (Lid lid : lids){
-            lid.makeInvisible();
-        }
-        cups.clear();
-        lids.clear();
-        currentHeight = 0;
-    
-        ArrayList<Object[]> sortedUnits = new ArrayList<>(units);
-        for (int a = 0; a < sortedUnits.size() - 1; a++){
-            for (int b = a + 1; b < sortedUnits.size(); b++){
-                if (getUnitNumber(sortedUnits.get(a)) < getUnitNumber(sortedUnits.get(b))){
-                    Object[] temp = sortedUnits.get(a);
-                    sortedUnits.set(a, sortedUnits.get(b));
-                    sortedUnits.set(b, temp);
-                }
-            }
-        }
-    
-        int centerTower = margen + (widthTower / 2);
-        int yBottom = heightTower * SCALE;
-    
-        for (Object[] unit : sortedUnits){
-            if (unit[0] != null){
-                Cup cup = (Cup) unit[0];
-                int xCentered = centerTower - (cup.getCupWidth() / 2);
-                int yPosition = yBottom - cup.getCupHeightPx();
-                cup.setPosition(xCentered, yPosition);
-            
-                if (isVisible){
-                    cup.makeVisible();
-                }
-                cups.add(cup);
-                currentHeight += cup.getCupHeight();
-                yBottom = yPosition;
-            }
-        
-            if (unit[1] != null){
-                Lid lid = (Lid) unit[1];
-                int xCentered = centerTower - (lid.getLidWidth() / 2);
-                lid.setPosition(xCentered, yBottom - lid.getLidHeight());
-            
-                if (isVisible){
-                    lid.makeVisible();
-                }
-                lids.add(lid);
-                currentHeight += 1;
-                yBottom = yBottom - lid.getLidHeight();
-            }
-        }
-    
-
-        orderCupsPosition();
-    }
     
     /**
      * Tapa todas las tazas que tienen tapa y luego
